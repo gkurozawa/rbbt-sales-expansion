@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
-import { DiscoveredCompany } from "@/lib/discover-types";
-import { CompanyAnalysis } from "@/lib/scoring";
+import { DiscoveredCompany, SIZE_META } from "@/lib/discover-types";
+import { CompanyAnalysis, VERDICT_META } from "@/lib/scoring";
 import { CompanyDetail } from "./CompanyDetail";
+
+// Mapa de cor de borda esquerda por veredito (mesma paleta de VERDICT_META.bg)
+const VERDICT_BORDER: Record<string, string> = {
+  vender: "border-l-emerald-600",
+  qualificar: "border-l-amber-500",
+  passar: "border-l-rose-600",
+};
 
 export function DiscoveryRow({ item }: { item: DiscoveredCompany }) {
   const [open, setOpen] = useState(false);
@@ -37,18 +44,39 @@ export function DiscoveryRow({ item }: { item: DiscoveredCompany }) {
     }
   }
 
+  const verdict = item.estimatedVerdict;
+  const borderClass = verdict ? VERDICT_BORDER[verdict] : "border-l-transparent";
+  const verdictMeta = verdict ? VERDICT_META[verdict] : null;
+
   return (
-    <div className="rounded-xl border border-black/10 bg-white/50 p-4 transition dark:border-white/10 dark:bg-white/[0.02]">
+    <div
+      className={`rounded-xl border border-black/10 border-l-4 bg-white/50 p-4 transition dark:border-white/10 dark:bg-white/[0.02] ${borderClass}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {verdictMeta && (
+              <span
+                className={`inline-flex items-baseline gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white ${verdictMeta.bg}`}
+              >
+                {verdictMeta.label}
+                {typeof item.estimatedScore === "number" && (
+                  <span className="opacity-90">· {item.estimatedScore}</span>
+                )}
+              </span>
+            )}
             <h3 className="text-lg font-semibold">{item.company}</h3>
             {item.category && (
               <span className="text-xs uppercase tracking-wide opacity-60">{item.category}</span>
             )}
+            {item.size && (
+              <span className="rounded-md bg-black/5 px-1.5 py-0.5 text-[10px] uppercase tracking-wide opacity-70 dark:bg-white/10">
+                {SIZE_META[item.size].label}
+              </span>
+            )}
           </div>
           {item.estimatedRevenue && (
-            <div className="mt-0.5 text-xs opacity-60">{item.estimatedRevenue}</div>
+            <div className="mt-1 text-xs opacity-60">{item.estimatedRevenue}</div>
           )}
           <p className="mt-2 text-sm leading-relaxed">{item.briefRationale}</p>
         </div>

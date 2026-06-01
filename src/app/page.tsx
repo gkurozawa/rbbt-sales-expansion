@@ -21,11 +21,21 @@ export default function Home() {
   const [singleResult, setSingleResult] = useState<CompanyAnalysis | null>(null);
 
   // discover mode
-  const [size, setSize] = useState<CompanySize>("medium");
+  const [sizes, setSizes] = useState<CompanySize[]>(["medium"]);
   const [count, setCount] = useState<number>(10);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
   const [discoverResult, setDiscoverResult] = useState<DiscoveredCompany[] | null>(null);
+
+  function toggleSize(key: CompanySize) {
+    setSizes((prev) => {
+      if (prev.includes(key)) {
+        if (prev.length === 1) return prev; // sempre ao menos um
+        return prev.filter((s) => s !== key);
+      }
+      return [...prev, key];
+    });
+  }
 
   async function handleSingleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +68,7 @@ export default function Home() {
       const res = await fetch("/api/discover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ size, count }),
+        body: JSON.stringify({ sizes, count }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
@@ -145,24 +155,30 @@ export default function Home() {
             className="mb-10 space-y-4 rounded-2xl border border-black/10 p-5 dark:border-white/10"
           >
             <div>
-              <label className="mb-2 block text-sm font-medium">Porte das empresas</label>
+              <label className="mb-2 block text-sm font-medium">
+                Porte das empresas <span className="opacity-60">(pode selecionar mais de um)</span>
+              </label>
               <div className="flex flex-wrap gap-2">
-                {(Object.keys(SIZE_META) as CompanySize[]).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setSize(key)}
-                    disabled={discoverLoading}
-                    className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                      size === key
-                        ? "border-indigo-500 bg-indigo-500/10"
-                        : "border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
-                    } disabled:opacity-50`}
-                  >
-                    <div className="font-medium">{SIZE_META[key].label}</div>
-                    <div className="text-xs opacity-70">{SIZE_META[key].range}</div>
-                  </button>
-                ))}
+                {(Object.keys(SIZE_META) as CompanySize[]).map((key) => {
+                  const active = sizes.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleSize(key)}
+                      disabled={discoverLoading}
+                      aria-pressed={active}
+                      className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
+                        active
+                          ? "border-indigo-500 bg-indigo-500/10"
+                          : "border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
+                      } disabled:opacity-50`}
+                    >
+                      <div className="font-medium">{SIZE_META[key].label}</div>
+                      <div className="text-xs opacity-70">{SIZE_META[key].range}</div>
+                    </button>
+                  );
+                })}
               </div>
               <p className="mt-2 text-xs opacity-60">
                 Faturamento considera a empresa total (matriz + operações), não unidades fragmentadas.
@@ -216,7 +232,8 @@ export default function Home() {
             <section className="space-y-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-lg font-semibold">
-                  {discoverResult.length} empresas candidatas — porte {SIZE_META[size].label.toLowerCase()}
+                  {discoverResult.length} empresas candidatas — portes{" "}
+                  {sizes.map((s) => SIZE_META[s].label.toLowerCase()).join(", ")}
                 </h2>
                 <p className="text-xs opacity-60">
                   Cada linha traz um resumo de qualificação. Clique em <strong>Mais detalhes</strong> para o breakdown completo.

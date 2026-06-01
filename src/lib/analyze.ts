@@ -1,7 +1,6 @@
-import { readFileSync } from "fs";
-import path from "path";
 import { jsonrepair } from "jsonrepair";
 import { callClaude } from "./claude-cli";
+import { loadSkillBody } from "./skill-loader";
 import {
   CRITERIA,
   CompanyAnalysis,
@@ -15,22 +14,7 @@ const CRITERIA_BLOCK = CRITERIA.map(
   (c) => `- ${c.key} ("${c.label}", peso ${c.weight}): ${c.description} ${c.scoreMeaning}`
 ).join("\n");
 
-// Carrega o conteúdo da skill .claude/skills/pesquisar-atendimento-chat/SKILL.md
-// uma vez no module load. Se o arquivo não existir (ex.: deploy sem .claude), degrada graciosamente.
-const CHAT_RESEARCH_METHODOLOGY = (() => {
-  try {
-    const skillPath = path.join(
-      process.cwd(),
-      ".claude/skills/pesquisar-atendimento-chat/SKILL.md"
-    );
-    const raw = readFileSync(skillPath, "utf8");
-    // Remove o frontmatter YAML (entre as duas linhas ---)
-    const body = raw.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "").trim();
-    return body;
-  } catch {
-    return "";
-  }
-})();
+const CHAT_RESEARCH_METHODOLOGY = loadSkillBody("pesquisar-atendimento-chat");
 
 const SCHEMA_HINT = `{
   "company": "string",
