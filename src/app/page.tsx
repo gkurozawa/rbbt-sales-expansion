@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CompanyAnalysis } from "@/lib/scoring";
+import { CompanyAnalysis, VERDICT_META } from "@/lib/scoring";
 import { ScoreBadge } from "@/components/ScoreBadge";
 import { CriteriaTable } from "@/components/CriteriaTable";
 
@@ -109,6 +109,17 @@ export default function Home() {
               <p className="mt-2 text-xs opacity-60">Confiança geral: {CONF_LABEL[result.overallConfidence]}</p>
             </div>
             <ScoreBadge value={result.totalScore} />
+          </div>
+
+          <div className={`rounded-2xl p-6 text-white shadow-sm ${VERDICT_META[result.verdict].bg}`}>
+            <div className="text-xs font-semibold uppercase tracking-widest opacity-90">Veredito</div>
+            <div className="mt-1 flex items-baseline gap-3">
+              <span className="text-3xl font-bold">{VERDICT_META[result.verdict].label}</span>
+              <span className="text-sm opacity-90">{VERDICT_META[result.verdict].description}</span>
+            </div>
+            {result.verdictHeadline && (
+              <p className="mt-3 text-base leading-relaxed">{result.verdictHeadline}</p>
+            )}
           </div>
 
           <div className="rounded-2xl bg-indigo-50 p-5 text-sm leading-relaxed dark:bg-indigo-950/30">

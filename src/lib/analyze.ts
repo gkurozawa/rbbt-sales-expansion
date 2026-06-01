@@ -5,6 +5,7 @@ import {
   CompanyAnalysis,
   CriterionKey,
   CriterionScore,
+  Verdict,
   computeTotal,
 } from "./scoring";
 
@@ -15,6 +16,8 @@ const CRITERIA_BLOCK = CRITERIA.map(
 const SCHEMA_HINT = `{
   "company": "string",
   "overview": "1-2 frases descrevendo o que a empresa faz e onde opera",
+  "verdict": "vender | qualificar | passar",
+  "verdictHeadline": "1 frase direta respondendo: vale a pena vender RBBT Sales para essa empresa? Por quê?",
   "criteria": [
     { "key": "${CRITERIA[0].key}", "score": 0-10, "confidence": "low|medium|high", "evidence": ["fato público 1", "fato público 2"] }
     // ... uma entrada por critério, na mesma ordem
@@ -50,6 +53,11 @@ INSTRUÇÕES:
 3. Se você não tem informação suficiente sobre algum critério, use confidence "low" e um score conservador.
 4. Liste redFlags se a empresa NÃO for boa candidata (ex.: já é totalmente omnicanal, ou opera só B2B).
 5. Sources: liste os tipos de fonte que você usou (ex.: "site oficial", "Reclame Aqui", "Instagram", "reportagens").
+6. Verdict: dê um veredito comercial direto:
+   - "vender" → vale a pena priorizar essa empresa agora; o encaixe com RBBT Sales é claro
+   - "qualificar" → há sinais positivos mas também lacunas; precisa de mais discovery antes de investir tempo comercial
+   - "passar" → não é fit no momento (já omnicanal, B2B puro, atendimento já maduro, ou contradiz a tese)
+7. VerdictHeadline: uma única frase que responde "é ou não é bom fit pra vender RBBT Sales?" com a razão principal.
 
 Responda APENAS com um JSON válido seguindo este schema (sem prosa antes ou depois, sem markdown, sem \`\`\`):
 ${SCHEMA_HINT}`;
@@ -71,12 +79,23 @@ function safeParse(raw: string): unknown {
 type RawAnalysis = {
   company?: string;
   overview?: string;
+  verdict?: string;
+  verdictHeadline?: string;
   criteria?: Array<{ key?: string; score?: number; confidence?: string; evidence?: string[] }>;
   overallConfidence?: string;
   opportunity?: string;
   redFlags?: string[];
   sources?: string[];
 };
+
+function normalizeVerdict(v: unknown, totalScore: number): Verdict {
+  const s = String(v || "").toLowerCase();
+  if (s === "vender" || s === "qualificar" || s === "passar") return s;
+  // fallback derivado do score se o LLM não retornar
+  if (totalScore >= 65) return "vender";
+  if (totalScore >= 40) return "qualificar";
+  return "passar";
+}
 
 function clamp(n: number, min: number, max: number): number {
   if (Number.isNaN(n)) return min;
@@ -112,11 +131,14 @@ function normalize(raw: RawAnalysis, fallbackCompany: string): CompanyAnalysis {
       }
   );
 
+  const totalScore = computeTotal(criteria);
   return {
     company: raw.company || fallbackCompany,
     overview: raw.overview || "",
+    verdict: normalizeVerdict(raw.verdict, totalScore),
+    verdictHeadline: raw.verdictHeadline || "",
     criteria,
-    totalScore: computeTotal(criteria),
+    totalScore,
     overallConfidence: normalizeConfidence(raw.overallConfidence),
     opportunity: raw.opportunity || "",
     redFlags: Array.isArray(raw.redFlags) ? raw.redFlags.map(String) : [],

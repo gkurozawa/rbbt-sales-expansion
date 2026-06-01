@@ -65,6 +65,26 @@ export const CRITERIA: {
 
 export type Confidence = "low" | "medium" | "high";
 
+export type Verdict = "vender" | "qualificar" | "passar";
+
+export const VERDICT_META: Record<Verdict, { label: string; bg: string; description: string }> = {
+  vender: {
+    label: "Vender",
+    bg: "bg-emerald-600",
+    description: "Bom fit — vale priorizar a abordagem comercial.",
+  },
+  qualificar: {
+    label: "Qualificar",
+    bg: "bg-amber-500",
+    description: "Possível fit, mas há lacunas de informação ou sinais mistos. Aprofundar antes de investir tempo.",
+  },
+  passar: {
+    label: "Passar",
+    bg: "bg-rose-600",
+    description: "Não é bom fit no momento — focar tempo em alvos mais qualificados.",
+  },
+};
+
 export type CriterionScore = {
   key: CriterionKey;
   score: number;            // 0-10
@@ -75,6 +95,8 @@ export type CriterionScore = {
 export type CompanyAnalysis = {
   company: string;
   overview: string;          // 1-2 frases descrevendo a empresa
+  verdict: Verdict;           // veredito comercial: vender / qualificar / passar
+  verdictHeadline: string;    // 1 frase punchy resumindo o veredito
   criteria: CriterionScore[];
   totalScore: number;         // 0-100 (calculado, não vem do LLM)
   overallConfidence: Confidence;
