@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import path from "path";
 import { jsonrepair } from "jsonrepair";
 import { callClaude } from "./claude-cli";
 import {
@@ -12,6 +14,23 @@ import {
 const CRITERIA_BLOCK = CRITERIA.map(
   (c) => `- ${c.key} ("${c.label}", peso ${c.weight}): ${c.description} ${c.scoreMeaning}`
 ).join("\n");
+
+// Carrega o conteúdo da skill .claude/skills/pesquisar-atendimento-chat/SKILL.md
+// uma vez no module load. Se o arquivo não existir (ex.: deploy sem .claude), degrada graciosamente.
+const CHAT_RESEARCH_METHODOLOGY = (() => {
+  try {
+    const skillPath = path.join(
+      process.cwd(),
+      ".claude/skills/pesquisar-atendimento-chat/SKILL.md"
+    );
+    const raw = readFileSync(skillPath, "utf8");
+    // Remove o frontmatter YAML (entre as duas linhas ---)
+    const body = raw.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "").trim();
+    return body;
+  } catch {
+    return "";
+  }
+})();
 
 const SCHEMA_HINT = `{
   "company": "string",
@@ -58,7 +77,11 @@ INSTRUÇÕES:
    - "qualificar" → há sinais positivos mas também lacunas; precisa de mais discovery antes de investir tempo comercial
    - "passar" → não é fit no momento (já omnicanal, B2B puro, atendimento já maduro, ou contradiz a tese)
 7. VerdictHeadline: uma única frase que responde "é ou não é bom fit pra vender RBBT Sales?" com a razão principal.
-
+${
+  CHAT_RESEARCH_METHODOLOGY
+    ? `\nMETODOLOGIA APROFUNDADA — atendimento por chat (aplicar especialmente aos critérios "customer_dissatisfaction", "service_capacity_gap", "channel_immaturity" e "integration_gap"):\n\n${CHAT_RESEARCH_METHODOLOGY}\n\nIMPORTANTE: incorpore esses sinais às evidências de cada critério acima. Não devolva a estrutura Markdown da metodologia — devolva apenas o JSON final do schema abaixo.\n`
+    : ""
+}
 Responda APENAS com um JSON válido seguindo este schema (sem prosa antes ou depois, sem markdown, sem \`\`\`):
 ${SCHEMA_HINT}`;
 }
