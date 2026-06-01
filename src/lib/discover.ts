@@ -4,6 +4,7 @@ import { callClaude } from "./claude-cli";
 import { loadSkillBody } from "./skill-loader";
 import { CompanySize, DiscoveredCompany, SIZE_META } from "./discover-types";
 import type { Verdict } from "./scoring";
+import { normalizeTraffic } from "./analyze";
 
 export type { CompanySize, DiscoveredCompany } from "./discover-types";
 export { SIZE_META } from "./discover-types";
@@ -18,6 +19,11 @@ const SCHEMA_HINT = `{
       "estimatedScore": 0-100,
       "estimatedVerdict": "vender | qualificar | passar",
       "estimatedRevenue": "estimativa pública aproximada do faturamento anual total",
+      "monthlyTraffic": {
+        "value": "tráfego mensal aproximado do site, formato humano (ex.: '~2 mi visitas/mês', '~80k visitas/mês'). Omita o objeto inteiro se não houver dado confiável.",
+        "source": "SimilarWeb, NeoTrust, relatório anual, reportagem etc.",
+        "confidence": "low | medium | high"
+      },
       "category": "setor/categoria principal",
       "size": "small | medium | large",
       "sources": ["tipos de fonte usados"]
@@ -61,6 +67,7 @@ INSTRUÇÕES:
    - estimatedScore: 0-100 — sua estimativa rápida de fit como cliente do RBBT Sales (calibrada pelos critérios listados; 75+ é fit alto, 55-74 fit bom, 35-54 médio, abaixo disso baixo).
    - estimatedVerdict: "vender" (fit claro, priorizar), "qualificar" (sinais positivos mas com lacunas, precisa de discovery) ou "passar" (não é fit).
    - size: o porte ao qual a empresa pertence ("small", "medium" ou "large").
+   - monthlyTraffic: estimativa do tráfego mensal do site principal usando as referências MAIS CONFIÁVEIS que você conhecer (SimilarWeb, NeoTrust/Compre&Confie, relatórios anuais, mídia setorial). Indique fonte e confidence. Se a empresa for puramente offline ou não houver dado confiável, omita o objeto monthlyTraffic — NÃO chute números.
 5. Evite empresas claramente fora do perfil (puramente B2B, ou totalmente omnicanal maduro como Magalu/Mercado Livre).
 6. Se você não souber empresas suficientes com alta confiança, prefira ser conservadora nos scores/vereditos do que inventar dados.
 ${
@@ -123,6 +130,7 @@ export async function discoverCompanies(input: {
         estimatedScore: Number.isFinite(score) ? Math.round(score) : undefined,
         estimatedVerdict: normalizeVerdict(c.estimatedVerdict, score),
         estimatedRevenue: c.estimatedRevenue ? String(c.estimatedRevenue).trim() : undefined,
+        monthlyTraffic: normalizeTraffic(c.monthlyTraffic),
         category: c.category ? String(c.category).trim() : undefined,
         size: normalizeSize(c.size),
         sources: Array.isArray(c.sources) ? (c.sources as unknown[]).map(String) : undefined,

@@ -92,11 +92,18 @@ export type CriterionScore = {
   evidence: string[];       // 1-3 observações públicas que sustentam a nota
 };
 
+export type TrafficEstimate = {
+  value: string;              // ex.: "~2 mi visitas/mês"
+  source?: string;             // ex.: "SimilarWeb (média trimestral)"
+  confidence?: Confidence;     // confiabilidade da estimativa
+};
+
 export type CompanyAnalysis = {
   company: string;
   overview: string;          // 1-2 frases descrevendo a empresa
   verdict: Verdict;           // veredito comercial: vender / qualificar / passar
   verdictHeadline: string;    // 1 frase punchy resumindo o veredito
+  monthlyTraffic?: TrafficEstimate;
   criteria: CriterionScore[];
   totalScore: number;         // 0-100 (calculado, não vem do LLM)
   overallConfidence: Confidence;

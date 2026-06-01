@@ -1,6 +1,7 @@
 import { CompanyAnalysis, VERDICT_META } from "@/lib/scoring";
 import { ScoreBadge } from "./ScoreBadge";
 import { CriteriaTable } from "./CriteriaTable";
+import { TrafficPill } from "./TrafficPill";
 
 const CONF_LABEL: Record<string, string> = {
   low: "baixa",
@@ -15,7 +16,10 @@ export function CompanyDetail({ analysis }: { analysis: CompanyAnalysis }) {
         <div>
           <h3 className="text-xl font-bold">{analysis.company}</h3>
           <p className="mt-1 max-w-2xl text-sm opacity-80">{analysis.overview}</p>
-          <p className="mt-1 text-xs opacity-60">Confiança geral: {CONF_LABEL[analysis.overallConfidence]}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <span className="opacity-60">Confiança geral: {CONF_LABEL[analysis.overallConfidence]}</span>
+            <TrafficPill traffic={analysis.monthlyTraffic} />
+          </div>
         </div>
         <ScoreBadge value={analysis.totalScore} />
       </div>

@@ -6,6 +6,7 @@ import {
   CompanyAnalysis,
   CriterionKey,
   CriterionScore,
+  TrafficEstimate,
   Verdict,
   computeTotal,
 } from "./scoring";
@@ -21,6 +22,11 @@ const SCHEMA_HINT = `{
   "overview": "1-2 frases descrevendo o que a empresa faz e onde opera",
   "verdict": "vender | qualificar | passar",
   "verdictHeadline": "1 frase direta respondendo: vale a pena vender RBBT Sales para essa empresa? Por quê?",
+  "monthlyTraffic": {
+    "value": "tráfego mensal aproximado do site principal, em formato humano (ex.: '~2,5 mi visitas/mês', '~80k visitas/mês'). Se não souber, omita o campo monthlyTraffic inteiro.",
+    "source": "fonte principal: 'SimilarWeb', 'estudo setorial NeoTrust/Compre&Confie', 'relatório anual da empresa', 'reportagem', etc.",
+    "confidence": "low | medium | high — quão confiável é essa estimativa"
+  },
   "criteria": [
     { "key": "${CRITERIA[0].key}", "score": 0-10, "confidence": "low|medium|high", "evidence": ["fato público 1", "fato público 2"] }
     // ... uma entrada por critério, na mesma ordem
@@ -28,7 +34,7 @@ const SCHEMA_HINT = `{
   "overallConfidence": "low|medium|high",
   "opportunity": "2-3 frases — por que (ou não) essa empresa é alvo do RBBT Sales",
   "redFlags": ["razões para não priorizar, se houver"],
-  "sources": ["canais públicos que você consultou em seu conhecimento, ex.: 'site oficial', 'Reclame Aqui', 'Instagram', 'TikTok'"]
+  "sources": ["canais públicos que você consultou em seu conhecimento, ex.: 'site oficial', 'Reclame Aqui', 'Instagram', 'TikTok', 'SimilarWeb'"]
 }`;
 
 function buildPrompt(input: { company: string; url?: string; notes?: string }): string {
@@ -61,6 +67,7 @@ INSTRUÇÕES:
    - "qualificar" → há sinais positivos mas também lacunas; precisa de mais discovery antes de investir tempo comercial
    - "passar" → não é fit no momento (já omnicanal, B2B puro, atendimento já maduro, ou contradiz a tese)
 7. VerdictHeadline: uma única frase que responde "é ou não é bom fit pra vender RBBT Sales?" com a razão principal.
+8. MonthlyTraffic: estime o tráfego mensal do site principal da empresa usando as referências MAIS CONFIÁVEIS que você conhecer (SimilarWeb, NeoTrust/Compre&Confie, relatórios anuais, mídia setorial). Indique a fonte e a confidence (low|medium|high). Se a empresa for puramente offline ou não houver dados confiáveis, omita o campo monthlyTraffic. NÃO invente números — prefira omitir a chutar.
 ${
   CHAT_RESEARCH_METHODOLOGY
     ? `\nMETODOLOGIA APROFUNDADA — atendimento por chat (aplicar especialmente aos critérios "customer_dissatisfaction", "service_capacity_gap", "channel_immaturity" e "integration_gap"):\n\n${CHAT_RESEARCH_METHODOLOGY}\n\nIMPORTANTE: incorpore esses sinais às evidências de cada critério acima. Não devolva a estrutura Markdown da metodologia — devolva apenas o JSON final do schema abaixo.\n`
@@ -88,12 +95,25 @@ type RawAnalysis = {
   overview?: string;
   verdict?: string;
   verdictHeadline?: string;
+  monthlyTraffic?: { value?: unknown; source?: unknown; confidence?: unknown };
   criteria?: Array<{ key?: string; score?: number; confidence?: string; evidence?: string[] }>;
   overallConfidence?: string;
   opportunity?: string;
   redFlags?: string[];
   sources?: string[];
 };
+
+export function normalizeTraffic(raw: unknown): TrafficEstimate | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const obj = raw as { value?: unknown; source?: unknown; confidence?: unknown };
+  const value = typeof obj.value === "string" ? obj.value.trim() : "";
+  if (!value) return undefined;
+  const conf = String(obj.confidence || "").toLowerCase();
+  const confidence: TrafficEstimate["confidence"] =
+    conf === "low" || conf === "medium" || conf === "high" ? conf : undefined;
+  const source = typeof obj.source === "string" ? obj.source.trim() : undefined;
+  return { value, source: source || undefined, confidence };
+}
 
 function normalizeVerdict(v: unknown, totalScore: number): Verdict {
   const s = String(v || "").toLowerCase();
@@ -144,6 +164,7 @@ function normalize(raw: RawAnalysis, fallbackCompany: string): CompanyAnalysis {
     overview: raw.overview || "",
     verdict: normalizeVerdict(raw.verdict, totalScore),
     verdictHeadline: raw.verdictHeadline || "",
+    monthlyTraffic: normalizeTraffic(raw.monthlyTraffic),
     criteria,
     totalScore,
     overallConfidence: normalizeConfidence(raw.overallConfidence),

@@ -1,5 +1,5 @@
 // Tipos e constantes da descoberta — seguros pra importar em client components.
-import type { Verdict } from "./scoring";
+import type { TrafficEstimate, Verdict } from "./scoring";
 
 export type CompanySize = "small" | "medium" | "large";
 
@@ -27,6 +27,7 @@ export type DiscoveredCompany = {
   estimatedScore?: number;      // 0-100 — estimativa rápida de fit como cliente RBBT Sales
   estimatedVerdict?: Verdict;    // veredito estimado: vender | qualificar | passar
   estimatedRevenue?: string;
+  monthlyTraffic?: TrafficEstimate;
   category?: string;
   size?: CompanySize;            // porte atribuído pelo modelo (útil quando há multi-select)
   sources?: string[];

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { DiscoveredCompany, SIZE_META } from "@/lib/discover-types";
 import { CompanyAnalysis, VERDICT_META } from "@/lib/scoring";
 import { CompanyDetail } from "./CompanyDetail";
+import { TrafficPill } from "./TrafficPill";
 
 // Mapa de cor de borda esquerda por veredito (mesma paleta de VERDICT_META.bg)
 const VERDICT_BORDER: Record<string, string> = {
@@ -75,9 +76,10 @@ export function DiscoveryRow({ item }: { item: DiscoveredCompany }) {
               </span>
             )}
           </div>
-          {item.estimatedRevenue && (
-            <div className="mt-1 text-xs opacity-60">{item.estimatedRevenue}</div>
-          )}
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            {item.estimatedRevenue && <span className="opacity-60">{item.estimatedRevenue}</span>}
+            <TrafficPill traffic={item.monthlyTraffic} />
+          </div>
           <p className="mt-2 text-sm leading-relaxed">{item.briefRationale}</p>
         </div>
         <button
