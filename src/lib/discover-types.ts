@@ -6,18 +6,18 @@ export type CompanySize = "small" | "medium" | "large";
 export const SIZE_META: Record<CompanySize, { label: string; range: string; description: string }> = {
   small: {
     label: "Pequenas",
-    range: "até R$1 mi/ano",
-    description: "faturamento total anual de até R$ 1 milhão",
+    range: "até R$50 mi/ano",
+    description: "faturamento total anual de até R$ 50 milhões",
   },
   medium: {
     label: "Médias",
-    range: "R$1 mi – R$50 mi/ano",
-    description: "faturamento total anual entre R$ 1 milhão e R$ 50 milhões",
+    range: "R$50 mi – R$500 mi/ano",
+    description: "faturamento total anual entre R$ 50 milhões e R$ 500 milhões",
   },
   large: {
     label: "Grandes",
-    range: "acima de R$50 mi/ano",
-    description: "faturamento total anual acima de R$ 50 milhões",
+    range: "acima de R$500 mi/ano",
+    description: "faturamento total anual acima de R$ 500 milhões",
   },
 };
 
