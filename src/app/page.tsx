@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { CompanyAnalysis } from "@/lib/scoring";
 import { CompanySize, DiscoveredCompany, SIZE_META } from "@/lib/discover-types";
@@ -8,8 +8,37 @@ import { CompanyDetail } from "@/components/CompanyDetail";
 import { DiscoveryRow } from "@/components/DiscoveryRow";
 
 type Mode = "single" | "discover";
+type SortKey = "score-desc" | "score-asc" | "verdict" | "alpha";
 
 const COUNT_OPTIONS = [10, 20, 50] as const;
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "score-desc", label: "Score ↓" },
+  { key: "score-asc", label: "Score ↑" },
+  { key: "verdict", label: "Veredito" },
+  { key: "alpha", label: "A–Z" },
+];
+
+const VERDICT_RANK: Record<string, number> = { vender: 0, qualificar: 1, passar: 2 };
+
+function sortDiscovered(list: DiscoveredCompany[], key: SortKey): DiscoveredCompany[] {
+  const arr = [...list];
+  switch (key) {
+    case "score-desc":
+      return arr.sort((a, b) => (b.estimatedScore ?? -1) - (a.estimatedScore ?? -1));
+    case "score-asc":
+      return arr.sort((a, b) => (a.estimatedScore ?? 999) - (b.estimatedScore ?? 999));
+    case "verdict":
+      return arr.sort((a, b) => {
+        const av = a.estimatedVerdict ? VERDICT_RANK[a.estimatedVerdict] : 3;
+        const bv = b.estimatedVerdict ? VERDICT_RANK[b.estimatedVerdict] : 3;
+        if (av !== bv) return av - bv;
+        return (b.estimatedScore ?? -1) - (a.estimatedScore ?? -1);
+      });
+    case "alpha":
+      return arr.sort((a, b) => a.company.localeCompare(b.company, "pt-BR"));
+  }
+}
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("single");
@@ -26,6 +55,12 @@ export default function Home() {
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
   const [discoverResult, setDiscoverResult] = useState<DiscoveredCompany[] | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("score-desc");
+
+  const sortedResult = useMemo(
+    () => (discoverResult ? sortDiscovered(discoverResult, sortKey) : null),
+    [discoverResult, sortKey]
+  );
 
   function toggleSize(key: CompanySize) {
     setSizes((prev) => {
@@ -228,19 +263,37 @@ export default function Home() {
             </div>
           )}
 
-          {discoverResult && (
+          {sortedResult && (
             <section className="space-y-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-lg font-semibold">
-                  {discoverResult.length} empresas candidatas — portes{" "}
+                  {sortedResult.length} empresas candidatas — portes{" "}
                   {sizes.map((s) => SIZE_META[s].label.toLowerCase()).join(", ")}
                 </h2>
                 <p className="text-xs opacity-60">
                   Cada linha traz um resumo de qualificação. Clique em <strong>Mais detalhes</strong> para o breakdown completo.
                 </p>
               </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="opacity-70">Ordenar por:</span>
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setSortKey(opt.key)}
+                    aria-pressed={sortKey === opt.key}
+                    className={`rounded-full border px-2.5 py-1 transition ${
+                      sortKey === opt.key
+                        ? "border-indigo-500 bg-indigo-500/10 font-medium"
+                        : "border-black/10 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
               <div className="space-y-3">
-                {discoverResult.map((item, i) => (
+                {sortedResult.map((item, i) => (
                   <DiscoveryRow key={`${item.company}-${i}`} item={item} />
                 ))}
               </div>
