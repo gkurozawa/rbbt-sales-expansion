@@ -8,7 +8,7 @@ import { CompanyDetail } from "@/components/CompanyDetail";
 import { DiscoveryRow } from "@/components/DiscoveryRow";
 
 type Mode = "single" | "discover";
-type SortKey = "score-desc" | "score-asc" | "verdict" | "alpha";
+type SortKey = "score-desc" | "score-asc" | "verdict" | "traffic-desc" | "alpha";
 
 const COUNT_OPTIONS = [10, 20, 50] as const;
 
@@ -16,10 +16,25 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "score-desc", label: "Score ↓" },
   { key: "score-asc", label: "Score ↑" },
   { key: "verdict", label: "Veredito" },
+  { key: "traffic-desc", label: "Tráfego ↓" },
   { key: "alpha", label: "A–Z" },
 ];
 
 const VERDICT_RANK: Record<string, number> = { vender: 0, qualificar: 1, passar: 2 };
+
+// Converte "~2,5 mi visitas/mês" → 2_500_000; "~80k/mês" → 80_000; "500 mil/mês" → 500_000.
+// Em ranges como "25-35 mi", usa o limite inferior (conservador).
+export function parseTrafficValue(value: string | undefined): number | null {
+  if (!value) return null;
+  const s = value.toLowerCase();
+  const numMatch = s.match(/(\d+(?:[.,]\d+)?)/);
+  if (!numMatch) return null;
+  const n = parseFloat(numMatch[1].replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  if (/milh[ãa]o|milh[oõ]es|\bmi\b/.test(s)) return n * 1_000_000;
+  if (/\bmil\b|\d\s*k(?![a-z])|k\/m[eê]s|k$/.test(s)) return n * 1_000;
+  return n;
+}
 
 function sortDiscovered(list: DiscoveredCompany[], key: SortKey): DiscoveredCompany[] {
   const arr = [...list];
@@ -33,6 +48,14 @@ function sortDiscovered(list: DiscoveredCompany[], key: SortKey): DiscoveredComp
         const av = a.estimatedVerdict ? VERDICT_RANK[a.estimatedVerdict] : 3;
         const bv = b.estimatedVerdict ? VERDICT_RANK[b.estimatedVerdict] : 3;
         if (av !== bv) return av - bv;
+        return (b.estimatedScore ?? -1) - (a.estimatedScore ?? -1);
+      });
+    case "traffic-desc":
+      return arr.sort((a, b) => {
+        // Sem dado vai pro fim
+        const at = parseTrafficValue(a.monthlyTraffic?.value) ?? -1;
+        const bt = parseTrafficValue(b.monthlyTraffic?.value) ?? -1;
+        if (bt !== at) return bt - at;
         return (b.estimatedScore ?? -1) - (a.estimatedScore ?? -1);
       });
     case "alpha":
