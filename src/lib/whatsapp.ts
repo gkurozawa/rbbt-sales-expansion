@@ -1,6 +1,6 @@
 import "server-only";
-import { jsonrepair } from "jsonrepair";
 import { callClaude } from "./claude-cli";
+import { safeParseJSON } from "./json-parse";
 import {
   CHANNEL_LABEL,
   CLASSIFICATION_LABEL,
@@ -176,18 +176,6 @@ export async function verifyChannels(input: {
 
 // --- Análise da resposta ---
 
-function safeParse(raw: string): unknown {
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```\s*$/i, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    return JSON.parse(jsonrepair(cleaned));
-  }
-}
-
 function clamp(n: number, min: number, max: number): number {
   if (!Number.isFinite(n)) return min;
   return Math.max(min, Math.min(max, n));
@@ -243,7 +231,7 @@ Critérios de classificação:
 - "humano-customizado": humano respondendo de forma personalizada à pergunta`;
 
   const raw = await callClaude(prompt, 90_000);
-  const parsed = safeParse(raw) as Record<string, unknown>;
+  const parsed = safeParseJSON(raw) as Record<string, unknown>;
   return {
     channel: input.channel,
     classification: normalizeClassification(parsed.classification),

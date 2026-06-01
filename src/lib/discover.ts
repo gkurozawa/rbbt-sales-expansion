@@ -1,6 +1,6 @@
 import "server-only";
-import { jsonrepair } from "jsonrepair";
 import { callClaude } from "./claude-cli";
+import { safeParseJSON, salvageObjects } from "./json-parse";
 import { loadSkillBody } from "./skill-loader";
 import { CompanySize, DiscoveredCompany, SIZE_META } from "./discover-types";
 import type { Verdict } from "./scoring";
@@ -79,18 +79,6 @@ Responda APENAS com JSON válido neste schema (sem markdown, sem prosa antes ou 
 ${SCHEMA_HINT}`;
 }
 
-function safeParse(raw: string): unknown {
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```\s*$/i, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    return JSON.parse(jsonrepair(cleaned));
-  }
-}
-
 function clamp(n: number, min: number, max: number): number {
   if (Number.isNaN(n)) return min;
   return Math.max(min, Math.min(max, n));
@@ -117,8 +105,26 @@ export async function discoverCompanies(input: {
   const prompt = buildPrompt(input.sizes, input.count);
   const timeout = input.count >= 50 ? 300_000 : input.count >= 20 ? 240_000 : 180_000;
   const raw = await callClaude(prompt, timeout);
-  const parsed = safeParse(raw) as { companies?: Array<Record<string, unknown>> };
-  const list = Array.isArray(parsed.companies) ? parsed.companies : [];
+
+  // Estratégia em dois estágios:
+  // 1) parse completo (com jsonrepair)
+  // 2) se falhar (resposta cortada / array malformado), tenta salvar os objetos
+  //    que estiverem inteiros — preserva o que dá pra usar.
+  let list: Array<Record<string, unknown>> = [];
+  try {
+    const parsed = safeParseJSON(raw) as { companies?: Array<Record<string, unknown>> };
+    list = Array.isArray(parsed.companies) ? parsed.companies : [];
+  } catch (err) {
+    const salvaged = salvageObjects(raw, "company") as Array<Record<string, unknown>>;
+    if (salvaged.length === 0) {
+      const msg = err instanceof Error ? err.message : "erro de parse";
+      throw new Error(
+        `${msg}. A resposta provavelmente foi cortada — tente com 'count' menor (10 ou 20).`
+      );
+    }
+    list = salvaged;
+  }
+
   return list
     .filter((c) => c && typeof c.company === "string" && (c.company as string).trim().length > 0)
     .slice(0, input.count)

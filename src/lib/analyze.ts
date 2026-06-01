@@ -1,5 +1,5 @@
-import { jsonrepair } from "jsonrepair";
 import { callClaude } from "./claude-cli";
+import { safeParseJSON } from "./json-parse";
 import { loadSkillBody } from "./skill-loader";
 import {
   CRITERIA,
@@ -75,19 +75,6 @@ ${
 }
 Responda APENAS com um JSON válido seguindo este schema (sem prosa antes ou depois, sem markdown, sem \`\`\`):
 ${SCHEMA_HINT}`;
-}
-
-function safeParse(raw: string): unknown {
-  // Remove fences caso o modelo decida usar ```json
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```\s*$/i, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    return JSON.parse(jsonrepair(cleaned));
-  }
 }
 
 type RawAnalysis = {
@@ -181,6 +168,6 @@ export async function analyzeCompany(input: {
 }): Promise<CompanyAnalysis> {
   const prompt = buildPrompt(input);
   const raw = await callClaude(prompt, 180_000);
-  const parsed = safeParse(raw) as RawAnalysis;
+  const parsed = safeParseJSON(raw) as RawAnalysis;
   return normalize(parsed, input.company);
 }
