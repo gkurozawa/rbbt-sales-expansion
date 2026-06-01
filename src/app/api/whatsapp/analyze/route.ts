@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeWhatsAppResponse } from "@/lib/whatsapp";
-import { ResponseSpeed, WhatsAppTestInput, WHATSAPP_TEST_QUESTION } from "@/lib/whatsapp-types";
+import { analyzeChannelResponse } from "@/lib/whatsapp";
+import { ResponseSpeed, TestChannel, WhatsAppTestInput, WHATSAPP_TEST_QUESTION } from "@/lib/whatsapp-types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const VALID_SPEEDS: ResponseSpeed[] = ["instant", "minutes", "tens", "hours", "no-response"];
+const VALID_CHANNELS: TestChannel[] = ["whatsapp", "chat"];
 
 export async function POST(req: NextRequest) {
   let body: Partial<WhatsAppTestInput> & { company?: unknown };
@@ -23,9 +24,15 @@ export async function POST(req: NextRequest) {
   if (!VALID_SPEEDS.includes(speed)) {
     return NextResponse.json({ error: `speed deve ser um de: ${VALID_SPEEDS.join(", ")}` }, { status: 400 });
   }
+  const channel = body.channel as TestChannel;
+  if (!VALID_CHANNELS.includes(channel)) {
+    return NextResponse.json({ error: `channel deve ser um de: ${VALID_CHANNELS.join(", ")}` }, { status: 400 });
+  }
 
   const input: WhatsAppTestInput = {
     company,
+    channel,
+    channelDetail: typeof body.channelDetail === "string" ? body.channelDetail : undefined,
     question: typeof body.question === "string" && body.question.trim() ? body.question : WHATSAPP_TEST_QUESTION,
     autoReplyReceived: Boolean(body.autoReplyReceived),
     responseText: typeof body.responseText === "string" ? body.responseText : undefined,
@@ -34,7 +41,7 @@ export async function POST(req: NextRequest) {
   };
 
   try {
-    const analysis = await analyzeWhatsAppResponse(input);
+    const analysis = await analyzeChannelResponse(input);
     return NextResponse.json(analysis);
   } catch (err) {
     const message = err instanceof Error ? err.message : "erro desconhecido";

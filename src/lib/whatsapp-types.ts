@@ -1,22 +1,38 @@
-// Tipos compartilhados (client-safe).
+// Tipos compartilhados (client-safe) para detecção e teste de canais de atendimento.
 
 export const WHATSAPP_TEST_QUESTION = "Não sei o que comprar. Pode me ajudar?";
 
-export type WhatsAppVerification = {
-  found: boolean;
-  number?: string;          // dígitos no formato E.164 sem '+': 5511999999999
-  display?: string;          // formatado: "+55 11 99999-9999"
-  websiteUrl?: string;       // URL que foi varrida
-  source?: string;           // origem do número: "site oficial", "wa.me", etc.
-  notes?: string;            // explicação adicional (especialmente quando não encontrado)
+export type WhatsAppFound = {
+  number: string;          // dígitos E.164 sem '+': 5511999999999
+  display: string;          // pretty: "+55 11 99999-9999"
+  source: string;           // origem (ex.: link wa.me no HTML)
+};
+
+export type ChatFound = {
+  provider: string;        // nome do widget (JivoChat, Zendesk Chat, etc.) ou "Chat (provedor não identificado)"
+  source: string;           // origem (script/pattern detectado)
+};
+
+export type ChannelVerification = {
+  whatsapp?: WhatsAppFound;
+  chat?: ChatFound;
+  websiteUrl?: string;
+  notes?: string;           // diagnóstico extra
+};
+
+export type TestChannel = "whatsapp" | "chat";
+
+export const CHANNEL_LABEL: Record<TestChannel, string> = {
+  whatsapp: "WhatsApp",
+  chat: "chat",
 };
 
 export type ResponseSpeed =
-  | "instant"     // < 1 min
-  | "minutes"     // 1-10 min
-  | "tens"        // 10 min – 1h
-  | "hours"       // > 1h
-  | "no-response"; // sem resposta
+  | "instant"
+  | "minutes"
+  | "tens"
+  | "hours"
+  | "no-response";
 
 export const SPEED_LABEL: Record<ResponseSpeed, string> = {
   instant: "Instantâneo (< 1 min)",
@@ -28,11 +44,13 @@ export const SPEED_LABEL: Record<ResponseSpeed, string> = {
 
 export type WhatsAppTestInput = {
   company: string;
+  channel: TestChannel;
+  channelDetail?: string;      // ex.: "+55 51 3921-4004" ou "JivoChat"
   question: string;
   autoReplyReceived: boolean;
-  responseText?: string;       // texto recebido (auto-reply + humano, concatenado se houver)
+  responseText?: string;
   speed: ResponseSpeed;
-  notes?: string;              // observações extras do testador
+  notes?: string;
 };
 
 export type WhatsAppClassification =
@@ -53,9 +71,10 @@ export const CLASSIFICATION_LABEL: Record<WhatsAppClassification, string> = {
 };
 
 export type WhatsAppAnalysis = {
+  channel: TestChannel;
   classification: WhatsAppClassification;
-  qualityScore: number;       // 0-10
+  qualityScore: number;
   speed: ResponseSpeed;
-  observations: string[];     // 2-4 bullets
-  rbbtPitch: string;          // 2-3 frases
+  observations: string[];
+  rbbtPitch: string;
 };

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyWhatsApp } from "@/lib/whatsapp";
+import { verifyChannels } from "@/lib/whatsapp";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
   const url = typeof body.url === "string" ? body.url.trim() : undefined;
   try {
-    const result = await verifyWhatsApp({ company, url: url || undefined });
+    const result = await verifyChannels({ company, url: url || undefined });
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "erro desconhecido";
