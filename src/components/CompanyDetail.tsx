@@ -2,6 +2,7 @@ import { CompanyAnalysis, VERDICT_META } from "@/lib/scoring";
 import { ScoreBadge } from "./ScoreBadge";
 import { CriteriaTable } from "./CriteriaTable";
 import { TrafficPill } from "./TrafficPill";
+import { WhatsAppTest } from "./WhatsAppTest";
 
 const CONF_LABEL: Record<string, string> = {
   low: "baixa",
@@ -50,6 +51,8 @@ export function CompanyDetail({ analysis }: { analysis: CompanyAnalysis }) {
           </ul>
         </div>
       )}
+
+      <WhatsAppTest company={analysis.company} />
 
       <div>
         <h4 className="mb-3 text-base font-semibold">Detalhamento por critério</h4>
